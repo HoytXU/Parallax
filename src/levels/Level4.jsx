@@ -57,7 +57,7 @@ function pWin(ctx,imgs,flip,truth){
 }
 
 function pMoralFrame(ctx,mode,evil,flip,truth,now){
-  const px=14,py=H-138,pw=154,ph=124;
+  const pw=154,ph=124,px=W-pw-14,py=H-ph-12;
   ctx.save();
   // panel
   ctx.fillStyle='rgba(8,4,18,0.86)';ctx.beginPath();ctx.roundRect(px,py,pw,ph,9);ctx.fill();
@@ -453,8 +453,8 @@ export default function MoralDemo(){
       });
       ctx.restore();
       pMoralFrame(ctx,s.mode,evil,s.flipAlpha,s.truthAlpha,now);
-      ctx.fillStyle=s.mode==='box'?'rgba(240,215,155,0.6)':'rgba(155,180,255,0.6)';ctx.font='bold 11px monospace';ctx.textAlign='right';
-      ctx.fillText(s.mode==='box'?'[ BOX ]':'[ SPHERE ]',W-10,20);
+      ctx.fillStyle='rgba(195,210,230,0.50)';ctx.font='10px monospace';ctx.textAlign='right';
+      ctx.fillText('A D / ← → · move   Space · shoot/jump   Tab · switch   Esc · truth',W-12,18);
       if(s.won){
         ctx.fillStyle='rgba(0,0,0,0.65)';ctx.fillRect(0,0,W,H);
         ctx.fillStyle=s.sphereWon?'#a0d8ff':'#f0e8d0';ctx.font='bold 32px serif';ctx.textAlign='center';
@@ -467,57 +467,31 @@ export default function MoralDemo(){
     raf=requestAnimationFrame(tick);return()=>cancelAnimationFrame(raf);
   },[]);
 
-  const{mode,keyState,msg,won,sphereWon,boxTrapped,evil}=ui;
-  const steps=[
-    {label:'Walk right — find the image window, then the gate',done:mode==='sphere'||keyState!=='uncollected'||won},
-    {label:'Tab: be the spheres — button drops cage, stack 4 for key',done:keyState!=='uncollected'},
-    {label:'Run to EXIT with key, or trap box first then escape',done:won},
-  ];
+  const{won,sphereWon,evil}=ui;
   return(
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 p-6 font-sans">
-      <div className="max-w-[1520px] mx-auto grid lg:grid-cols-[260px_1fr] gap-6">
-        <div className="space-y-4">
-          <div className="rounded-3xl bg-white/5 border border-white/10 p-5">
-            <div className="text-xs uppercase tracking-[0.2em] text-neutral-500 mb-1">Level 4 · Moral</div>
-            <h1 className="text-2xl font-semibold">Point of View</h1>
-            <p className="text-sm text-neutral-400 mt-3 leading-6 italic">"{msg}"</p>
-            {boxTrapped&&<p className="text-xs text-orange-400 mt-2 animate-pulse">▣ BOX TRAPPED — Tab→box, shoot [Space]</p>}
-          </div>
-          <div className={`rounded-3xl p-5 border transition-all duration-500 ${mode==='box'?'bg-amber-900/20 border-amber-700/30':'bg-indigo-950/40 border-indigo-700/30'}`}>
-            <div className="text-xs uppercase tracking-wider text-neutral-500 mb-1">You are</div>
-            {mode==='box'?<><div className="font-semibold text-amber-300">The Box</div><div className="text-sm text-neutral-500 mt-1">Armed. Fatal to touch.</div></>
-                         :<><div className="font-semibold text-indigo-300">The Spheres</div><div className="text-sm text-neutral-500 mt-1">Village residents. Use the button, stack for the key.</div></>}
-          </div>
-          <div className="rounded-3xl bg-white/4 border border-white/8 p-5 space-y-3">
-            <div className="text-xs uppercase tracking-widest text-neutral-500">Objective</div>
-            {steps.map((step,i)=>(
-              <div key={i} className={`flex gap-3 text-sm leading-5 ${step.done?'text-neutral-600 line-through':'text-neutral-300'}`}>
-                <span className={`shrink-0 w-5 h-5 rounded-full border flex items-center justify-center text-[10px] mt-0.5 ${step.done?'bg-emerald-800/60 border-emerald-700 text-emerald-400':'border-neutral-600 text-neutral-500'}`}>{step.done?'✓':i+1}</span>
-                {step.label}
-              </div>
-            ))}
-          </div>
-          <div className="rounded-3xl bg-white/4 border border-white/8 p-5 text-sm text-neutral-500 space-y-2 leading-7">
-            <div className="font-semibold text-neutral-300 mb-1">Controls</div>
-            <div><span className="font-mono text-neutral-200">A D / ← →</span> — move</div>
-            <div><span className="font-mono text-neutral-200">Space</span> — shoot (box) / jump (sphere)</div>
-            <div><span className="font-mono text-neutral-200">Tab</span> — switch perspective</div>
-            <div><span className="font-mono text-neutral-200">Escape</span> — truth reveals itself</div>
-          </div>
-          {won&&<div className={`rounded-3xl p-5 border ${sphereWon?'bg-sky-950/40 border-sky-700/40':'bg-amber-950/30 border-amber-700/30'}`}>
-            <div className="text-xs uppercase tracking-wider text-neutral-500 mb-1">{sphereWon?'Sphere Victory':'Box Victory'}</div>
-            <p className="text-sm leading-6">{sphereWon?'The spheres defended their home.':'The box escaped — by force.'}</p>
-          </div>}
-        </div>
-        <div className="rounded-3xl bg-white/3 border border-white/8 p-4 overflow-hidden">
-          <canvas ref={canvasRef} width={W} height={H} className="w-full h-auto rounded-2xl block" onClick={onClick} style={{cursor:'default'}}/>
-          <div className={`mt-3 text-center transition-all duration-700 overflow-hidden ${evil ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'}`}>
-            <span className="text-2xl font-bold italic tracking-wide" style={{color:'#8b0000',fontFamily:'Georgia,serif',textShadow:'0 0 24px rgba(180,0,0,0.5)'}}>
-              Which side are you on?
-            </span>
-          </div>
-        </div>
+    <div className="fixed inset-0 bg-neutral-950 overflow-hidden font-sans">
+
+      {/* ── Canvas fills full width, centred vertically ── */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <canvas ref={canvasRef} width={W} height={H}
+          className="w-full h-auto max-h-screen block"
+          onClick={onClick} style={{cursor:'default'}}/>
       </div>
+
+      {/* ── "Which side are you on?" + victory — bottom strip ── */}
+      <div className="absolute inset-x-0 bottom-6 flex items-end justify-center gap-8 pointer-events-none px-6">
+        <div className={`transition-all duration-700 ${evil?'opacity-100':'opacity-0'}`}>
+          <span className="text-2xl font-bold italic tracking-wide"
+            style={{color:'#8b0000',fontFamily:'Georgia,serif',textShadow:'0 0 28px rgba(180,0,0,0.55)'}}>
+            Which side are you on?
+          </span>
+        </div>
+        {won&&<div className={`rounded-2xl px-4 py-2.5 border ${sphereWon?'bg-sky-950/65 border-sky-700/40':'bg-amber-950/60 border-amber-700/35'}`}>
+          <div className="text-[9px] uppercase tracking-wider text-neutral-500 mb-0.5">{sphereWon?'Sphere Victory':'Box Victory'}</div>
+          <p className="text-sm text-neutral-200">{sphereWon?'The spheres defended their home.':'The box escaped — by force.'}</p>
+        </div>}
+      </div>
+
     </div>
   );
 }
