@@ -15,6 +15,8 @@ const CAM_LERP = 13
 const LAND_DIST = 16
 const LAND_VN_MAX = 95
 const PLAT_HALF_H = 9
+const AIR_THRUST = 340    // px/s² — free-space thruster
+const MAX_AIR_SPD = 580   // px/s — top speed in air
 const VIEW_ZOOM = 1.45
 const TAU = Math.PI * 2
 
@@ -565,6 +567,34 @@ function drawPlat(ctx, body, t) {
   ctx.restore()
 }
 
+// ─── Thruster exhaust glow ────────────────────────────────────────────────────
+
+function drawThrustFX(ctx, px, py, tax, tay, now) {
+  const mag = Math.hypot(tax, tay)
+  if (mag < 1) return
+  // Exhaust exits in the direction OPPOSITE to thrust
+  const nx = tax / mag, ny = tay / mag
+  const ex = px - nx * 10, ey = py - ny * 10
+  ctx.save()
+  // Core plume
+  const g = ctx.createRadialGradient(ex, ey, 0, ex, ey, 22)
+  g.addColorStop(0,   'rgba(200, 235, 255, 0.95)')
+  g.addColorStop(0.3, 'rgba(100, 185, 255, 0.50)')
+  g.addColorStop(1,   'transparent')
+  ctx.fillStyle = g
+  ctx.beginPath(); ctx.arc(ex, ey, 22, 0, TAU); ctx.fill()
+  // Particle streaks fading further back
+  for (let i = 1; i <= 6; i++) {
+    const wobble = Math.sin(now * 0.014 + i * 1.9) * 3
+    const sx = ex - nx * (i * 6) + (-ny) * wobble
+    const sy = ey - ny * (i * 6) +   nx  * wobble
+    const a  = 0.22 * (1 - i / 7)
+    ctx.fillStyle = `rgba(140, 210, 255, ${a})`
+    ctx.beginPath(); ctx.arc(sx, sy, Math.max(0.5, 5 - i * 0.7), 0, TAU); ctx.fill()
+  }
+  ctx.restore()
+}
+
 // ─── Player box ───────────────────────────────────────────────────────────────
 
 function drawPlayer(ctx, wx, wy, thPlayer) {
@@ -689,6 +719,7 @@ export default function Level1() {
       const jumpKey = k.has('Space')      || k.has('ArrowUp') || k.has('KeyW')
 
       let targetView = 0, vxLoc = 0, vyLoc = 0, speed = 0, hudLabel = '—'
+      let thrustX = 0, thrustY = 0
 
       if (state.attachedId) {
         const body = bodyById[state.attachedId]
@@ -723,6 +754,20 @@ export default function Level1() {
           state.attachedId = null
         }
       } else {
+        // ── Directional air thrust (all 4 directions in world space) ──────────
+        const tax = (right ? AIR_THRUST : 0) - (left ? AIR_THRUST : 0)
+        const tay = (k.has('KeyS') || k.has('ArrowDown') ? AIR_THRUST : 0)
+                  - (k.has('KeyW') || k.has('ArrowUp')   ? AIR_THRUST : 0)
+        state.vx += tax * dt
+        state.vy += tay * dt
+        // Hard speed cap
+        const rawSpd = Math.hypot(state.vx, state.vy)
+        if (rawSpd > MAX_AIR_SPD) {
+          state.vx = state.vx / rawSpd * MAX_AIR_SPD
+          state.vy = state.vy / rawSpd * MAX_AIR_SPD
+        }
+        thrustX = tax; thrustY = tay
+        // Passive drag
         state.vx *= Math.exp(-AIR_DRAG * dt)
         state.vy *= Math.exp(-AIR_DRAG * dt)
         state.px += state.vx * dt
@@ -786,6 +831,7 @@ export default function Level1() {
       drawBodyDecorsBg(ctx, bodies, t, now)
       for (const b of bodies) drawPlat(ctx, b, t)
 
+      if (!state.attachedId) drawThrustFX(ctx, state.px, state.py, thrustX, thrustY, now)
       const thDraw = state.attachedId ? bodyTransform(bodyById[state.attachedId], t).th : 0
       drawPlayer(ctx, state.px, state.py, thDraw)
 
@@ -796,7 +842,7 @@ export default function Level1() {
 
       ctx.fillStyle = 'rgba(195,210,230,0.50)'
       ctx.font = '10px monospace'; ctx.textAlign = 'right'
-      ctx.fillText('A D · walk   Space / W · jump', W - 16, 24)
+      ctx.fillText('A D · walk on surface   Space · jump   WASD / ↑↓←→ · steer in air', W - 16, 24)
 
       raf = requestAnimationFrame(tick)
     }
