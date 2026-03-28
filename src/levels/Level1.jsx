@@ -257,6 +257,33 @@ function buildBodies() {
       color: 'rgba(200, 178, 142, 0.92)',
       rim:   'rgba(225, 205, 168, 0.8)',
     },
+
+    // ── 8 · RING BELT ─────────────────────────────────────────────────────────
+    // A large spinning ring. The platform rides the outer edge: th = ω·t + π/2
+    // so its "up" face always points radially away from the ring centre.
+    // From the rest frame, the whole universe revolves around the ring axis.
+    {
+      id: 'ringBelt',
+      label: 'Ring Belt',
+      kind: 'ringBelt',
+      w: 90,
+      _r: { rcx: 640, rcy: 490, R: 100, om: 0.68 },
+      transform(t) {
+        const { rcx, rcy, R, om } = this._r
+        const angle = om * t
+        return {
+          cx:  rcx + R * Math.cos(angle),
+          cy:  rcy + R * Math.sin(angle),
+          th:  angle + Math.PI / 2,   // surface always faces outward
+          vcx: -R * om * Math.sin(angle),
+          vcy:  R * om * Math.cos(angle),
+          om,
+        }
+      },
+      surfaceYLocal: -PLAT_HALF_H,
+      color: 'rgba(255, 200, 100, 0.96)',
+      rim:   'rgba(255, 160, 40, 1.0)',
+    },
   ]
 }
 
@@ -473,6 +500,66 @@ function drawBodyDecorsBg(ctx, bodies, t, now) {
       ctx.setLineDash([6, 12])
       ctx.beginPath(); ctx.arc(gcx, gcy, R, 0, TAU); ctx.stroke()
       ctx.setLineDash([])
+      ctx.restore()
+    }
+
+    // ── Ring Belt: spinning hoop + evenly-spaced nodes ───────────────────────
+    if (b.kind === 'ringBelt') {
+      const { rcx, rcy, R, om } = b._r
+      ctx.save()
+      // Outer glow halo
+      const halo = ctx.createRadialGradient(rcx, rcy, R - 18, rcx, rcy, R + 18)
+      halo.addColorStop(0,   'rgba(255,185,60,0.0)')
+      halo.addColorStop(0.4, 'rgba(255,185,60,0.28)')
+      halo.addColorStop(0.6, 'rgba(255,185,60,0.28)')
+      halo.addColorStop(1,   'rgba(255,185,60,0.0)')
+      ctx.fillStyle = halo
+      ctx.beginPath(); ctx.arc(rcx, rcy, R + 18, 0, TAU); ctx.fill()
+      ctx.beginPath(); ctx.arc(rcx, rcy, R - 18, 0, TAU)
+      ctx.save(); ctx.globalCompositeOperation = 'destination-out'
+      ctx.fillStyle = 'rgba(0,0,0,1)'; ctx.fill(); ctx.restore()
+
+      // Main ring stroke (two concentric lines for a band look)
+      ctx.strokeStyle = 'rgba(255, 195, 70, 0.90)'; ctx.lineWidth = 6
+      ctx.beginPath(); ctx.arc(rcx, rcy, R, 0, TAU); ctx.stroke()
+      ctx.strokeStyle = 'rgba(255, 230, 160, 0.40)'; ctx.lineWidth = 14
+      ctx.beginPath(); ctx.arc(rcx, rcy, R, 0, TAU); ctx.stroke()
+      ctx.strokeStyle = 'rgba(200, 130, 30, 0.55)'; ctx.lineWidth = 2
+      ctx.beginPath(); ctx.arc(rcx, rcy, R - 8, 0, TAU); ctx.stroke()
+      ctx.beginPath(); ctx.arc(rcx, rcy, R + 8, 0, TAU); ctx.stroke()
+
+      // Evenly-spaced nodes rotating with the ring
+      const NODES = 12
+      for (let i = 0; i < NODES; i++) {
+        const angle = om * t + (i / NODES) * TAU
+        const nx = rcx + R * Math.cos(angle)
+        const ny = rcy + R * Math.sin(angle)
+        const isPlat = i === 0  // node 0 is under the platform
+        ctx.fillStyle = isPlat ? 'rgba(255,230,120,0.95)' : 'rgba(255,190,80,0.65)'
+        ctx.beginPath(); ctx.arc(nx, ny, isPlat ? 5.5 : 3.5, 0, TAU); ctx.fill()
+        if (isPlat) {
+          ctx.strokeStyle = 'rgba(255,255,200,0.7)'; ctx.lineWidth = 1.5
+          ctx.stroke()
+        }
+      }
+
+      // Centre hub
+      const hub = ctx.createRadialGradient(rcx, rcy, 0, rcx, rcy, 16)
+      hub.addColorStop(0,   'rgba(255,220,140,0.55)')
+      hub.addColorStop(0.6, 'rgba(200,140,40,0.20)')
+      hub.addColorStop(1,   'transparent')
+      ctx.fillStyle = hub
+      ctx.beginPath(); ctx.arc(rcx, rcy, 16, 0, TAU); ctx.fill()
+
+      // Spokes (4 rotating with the ring)
+      ctx.strokeStyle = 'rgba(255,185,60,0.22)'; ctx.lineWidth = 1.5
+      for (let s = 0; s < 4; s++) {
+        const sa = om * t + (s / 4) * TAU
+        ctx.beginPath()
+        ctx.moveTo(rcx + 8 * Math.cos(sa), rcy + 8 * Math.sin(sa))
+        ctx.lineTo(rcx + (R - 6) * Math.cos(sa), rcy + (R - 6) * Math.sin(sa))
+        ctx.stroke()
+      }
       ctx.restore()
     }
 
