@@ -6,7 +6,7 @@ import perspectiveSrc from '../assets/perspective.png';
 
 const W=1400,H=500,GND=432,WW=2400,SR=25,BW=34,BH=46;
 const GX=1480,EX=2260,CW=BW+20,CH=BH+24;
-const PWIN={x:60,y:44,w:200,h:GND-44};
+const PWIN={x:110,y:44,w:200,h:GND-44};
 const WIN={x:1080,y:44,w:330,h:GND-44};
 const KP={x:1820,y:120,w:120,h:14},KPX=1875,KPY=108;
 const CBP={x:1620,y:244,w:80,h:12};
@@ -54,6 +54,83 @@ function pWin(ctx,imgs,flip,truth){
   const di=(img,a)=>{if(img?.complete&&a>0.01){ctx.save();ctx.globalAlpha=a;ctx.drawImage(img,x,y,w,h);ctx.restore();}};
   di(imgs.left,(1-flip)*b);di(imgs.right,flip*b);
   if(truth>0.01&&imgs.truth?.complete){ctx.save();ctx.globalAlpha=Math.min(1,truth);ctx.drawImage(imgs.truth,x,y,w,h);ctx.restore();}
+}
+
+function pMoralFrame(ctx,mode,evil,flip,truth,now){
+  const px=14,py=H-138,pw=154,ph=124;
+  ctx.save();
+  // panel
+  ctx.fillStyle='rgba(8,4,18,0.86)';ctx.beginPath();ctx.roundRect(px,py,pw,ph,9);ctx.fill();
+  ctx.strokeStyle='rgba(200,150,10,0.55)';ctx.lineWidth=1.2;ctx.beginPath();ctx.roundRect(px,py,pw,ph,9);ctx.stroke();
+  // title
+  ctx.fillStyle='rgba(210,175,80,0.75)';ctx.font='bold 8px monospace';ctx.textAlign='left';
+  ctx.fillText('MORAL FRAME',px+10,py+15);
+  ctx.strokeStyle='rgba(200,150,10,0.2)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(px+8,py+20);ctx.lineTo(px+pw-8,py+20);ctx.stroke();
+
+  // — box icon —
+  const bx=px+28,by=py+46;const boxActive=mode==='box';
+  if(boxActive){ctx.shadowColor=evil?'rgba(180,0,60,0.6)':'rgba(240,200,80,0.5)';ctx.shadowBlur=10;}
+  ctx.fillStyle=boxActive?(evil?'#200030':'#f0e4c0'):'rgba(100,80,50,0.3)';
+  ctx.fillRect(bx-9,by-12,18,22);
+  if(boxActive&&evil){ctx.fillStyle='#ff1840';ctx.fillRect(bx-4,by-5,4,4);ctx.fillRect(bx+1,by-5,4,4);}
+  else if(boxActive){ctx.fillStyle='#8b6830';ctx.fillRect(bx-4,by-5,4,4);ctx.fillRect(bx+1,by-5,4,4);}
+  ctx.shadowBlur=0;
+
+  // — sphere icon —
+  const sx=px+pw-28,sy=py+46;const sphActive=mode==='sphere';
+  const sc=mode==='sphere'?'#6080c0':evil?'#e8d060':'#440060';
+  if(sphActive){ctx.shadowColor='rgba(96,128,192,0.6)';ctx.shadowBlur=10;}
+  ctx.fillStyle=sphActive?sc:sc.replace(/[^,]+\)$/,'0.3)');
+  ctx.beginPath();ctx.arc(sx,sy,11,0,Math.PI*2);ctx.fill();
+  if(sphActive){ctx.fillStyle='#a0c0ff';ctx.beginPath();ctx.arc(sx-4,sy-3,2.5,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(sx+4,sy-3,2.5,0,Math.PI*2);ctx.fill();}
+  ctx.shadowBlur=0;
+
+  // active marker
+  const ax=boxActive?bx:sx;
+  ctx.fillStyle='rgba(255,230,100,0.95)';ctx.font='bold 8px monospace';ctx.textAlign='center';
+  ctx.fillText('YOU',ax,by+16);
+
+  // labels
+  ctx.font='7px monospace';
+  ctx.textAlign='center';ctx.fillStyle='rgba(180,150,80,0.55)';ctx.fillText('BOX',bx,by-18);
+  ctx.fillStyle='rgba(140,170,220,0.55)';ctx.fillText('SPHERE',sx,by-18);
+
+  // — moral position bar —
+  const bsx=px+12,bsy=py+78,bsw=pw-24,bsh=8;
+  ctx.fillStyle='rgba(30,20,50,0.9)';ctx.fillRect(bsx,bsy,bsw,bsh);
+  ctx.strokeStyle='rgba(120,90,40,0.35)';ctx.lineWidth=1;ctx.strokeRect(bsx,bsy,bsw,bsh);
+  const gr=ctx.createLinearGradient(bsx,bsy,bsx+bsw,bsy);
+  gr.addColorStop(0,'#c8960a');gr.addColorStop(1,'#7020b0');
+  ctx.fillStyle=gr;ctx.fillRect(bsx,bsy,bsw*flip,bsh);
+  // slider dot with pulse
+  const dotX=bsx+bsw*flip;
+  ctx.fillStyle=`rgba(255,240,180,${0.7+0.3*Math.sin(now*0.005)})`;
+  ctx.beginPath();ctx.arc(dotX,bsy+bsh/2,5,0,Math.PI*2);ctx.fill();
+  ctx.font='7px monospace';ctx.textAlign='left';
+  ctx.fillStyle='rgba(200,160,60,0.55)';ctx.fillText('OUTSIDE',bsx,bsy+bsh+10);
+  ctx.textAlign='right';ctx.fillStyle='rgba(180,120,255,0.55)';ctx.fillText('INSIDE',bsx+bsw,bsy+bsh+10);
+
+  // — truth flash —
+  if(truth>0.05){
+    ctx.fillStyle=`rgba(255,215,80,${truth*0.85})`;ctx.font='bold 8px monospace';ctx.textAlign='center';
+    ctx.fillText('✦ TRUTH REVEALED ✦',px+pw/2,py+ph-9);
+  }
+  ctx.restore();
+}
+
+function pMissionText(ctx,evil,flip){
+  const tx=340,ty=GND*0.42,lh=38;
+  ctx.save();
+  ctx.shadowColor='rgba(0,0,0,0.7)';ctx.shadowBlur=10;
+  ctx.font='bold 28px Georgia,serif';ctx.textAlign='left';
+  ctx.fillStyle='rgba(215,195,155,0.82)';
+  ctx.fillText("You're on a mission to",tx,ty);
+  // second line fades between the two versions
+  const b=1-Math.min(1,flip*2);
+  if(b>0.01){ctx.globalAlpha=b;ctx.fillStyle='rgba(215,195,155,0.82)';ctx.fillText('eliminate the evil spirits.',tx,ty+lh);}
+  if(flip>0.01){ctx.globalAlpha=Math.min(1,flip*2);ctx.fillStyle='rgba(230,80,60,0.92)';ctx.shadowColor='rgba(200,0,0,0.5)';ctx.shadowBlur=18;ctx.fillText('eliminate the other.',tx,ty+lh);}
+  ctx.restore();
 }
 
 function pGate(ctx){
@@ -209,8 +286,8 @@ export default function MoralDemo(){
              {id:2,x:1830,y:GND-SR,vx:0,vy:0,wd:1},{id:3,x:1970,y:GND-SR,vx:0,vy:0,wd:-1}],
   });
 
-  const[ui,setUi]=useState({mode:'box',keyState:'uncollected',msg:'',won:false,sphereWon:false,boxTrapped:false});
-  const sync=()=>{const s=S.current;setUi({mode:s.mode,keyState:s.keyState,msg:s.msg,won:s.won,sphereWon:s.sphereWon,boxTrapped:s.boxTrapped});};
+  const[ui,setUi]=useState({mode:'box',keyState:'uncollected',msg:'',won:false,sphereWon:false,boxTrapped:false,evil:false});
+  const sync=()=>{const s=S.current;setUi({mode:s.mode,keyState:s.keyState,msg:s.msg,won:s.won,sphereWon:s.sphereWon,boxTrapped:s.boxTrapped,evil:s.box.x+17>GX});};
 
   useEffect(()=>{
     [leftSrc,rightSrc,truthSrc,perspectiveSrc].forEach((src,i)=>{const img=new Image();img.src=src;imgsRef.current[['left','right','truth','perspective'][i]]=img;});
@@ -281,6 +358,8 @@ export default function MoralDemo(){
 
           s.bullets=s.bullets.filter(bl=>{
             bl.x+=bl.vx*dt;if(bl.x<-20||bl.x>WW+20)return false;
+            // gate wall blocks rightward bullets while box is outside
+            if(bl.vx>0&&!inVillage&&bl.x+BLW>=GX-16)return false;
             if(s.cage){const c=s.cage;if(bl.x+BLW>c.x&&bl.x<c.x+c.w&&bl.y+BLH>c.y&&bl.y<c.y+c.h){c.hp--;if(c.hp<=0){s.cage=null;s.boxTrapped=false;s.msg='Cage destroyed!';sync();}return false;}}
             for(let i=sphs.length-1;i>=0;i--){
               if(Math.hypot(bl.x+BLW/2-sphs[i].x,bl.y+BLH/2-sphs[i].y)<SR+6){
@@ -349,7 +428,7 @@ export default function MoralDemo(){
       // ─ Render ─
       const sphState=s.mode==='sphere'?'innocent':(evil?'brave':'demon');
       ctx.save();ctx.translate(-Math.round(s.camX),0);
-      pBg(ctx,evil,s.camX);pPWin(ctx,imgsRef.current.perspective);pWin(ctx,imgsRef.current,s.flipAlpha,s.truthAlpha);pGate(ctx);pKP(ctx);pCBP(ctx,s.buttonTriggered);pExit(ctx,s.keyState==='box_has');
+      pBg(ctx,evil,s.camX);pPWin(ctx,imgsRef.current.perspective);pMissionText(ctx,evil,s.flipAlpha);pWin(ctx,imgsRef.current,s.flipAlpha,s.truthAlpha);pGate(ctx);pKP(ctx);pCBP(ctx,s.buttonTriggered);pExit(ctx,s.keyState==='box_has');
       if(s.keyState==='uncollected'){pKey(ctx,KPX,KPY+Math.sin(now*0.002)*4,true);ctx.fillStyle='rgba(255,215,0,0.4)';ctx.font='9px monospace';ctx.textAlign='center';ctx.fillText('KEY',KPX+8,KPY-20);}
       if(s.keyState==='fallen'&&s.keyFallen)pKey(ctx,s.keyFallen.x,s.keyFallen.y,true);
       if(s.cageFalling)pCageFall(ctx,s.cageFalling,now);
@@ -373,6 +452,7 @@ export default function MoralDemo(){
         ctx.shadowBlur=0;ctx.strokeStyle=`rgba(255,120,60,${a*0.5})`;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(ef.x,ef.y,r*0.9,0,Math.PI*2);ctx.stroke();ctx.restore();return true;
       });
       ctx.restore();
+      pMoralFrame(ctx,s.mode,evil,s.flipAlpha,s.truthAlpha,now);
       ctx.fillStyle=s.mode==='box'?'rgba(240,215,155,0.6)':'rgba(155,180,255,0.6)';ctx.font='bold 11px monospace';ctx.textAlign='right';
       ctx.fillText(s.mode==='box'?'[ BOX ]':'[ SPHERE ]',W-10,20);
       if(s.won){
@@ -387,7 +467,7 @@ export default function MoralDemo(){
     raf=requestAnimationFrame(tick);return()=>cancelAnimationFrame(raf);
   },[]);
 
-  const{mode,keyState,msg,won,sphereWon,boxTrapped}=ui;
+  const{mode,keyState,msg,won,sphereWon,boxTrapped,evil}=ui;
   const steps=[
     {label:'Walk right — find the image window, then the gate',done:mode==='sphere'||keyState!=='uncollected'||won},
     {label:'Tab: be the spheres — button drops cage, stack 4 for key',done:keyState!=='uncollected'},
@@ -431,7 +511,11 @@ export default function MoralDemo(){
         </div>
         <div className="rounded-3xl bg-white/3 border border-white/8 p-4 overflow-hidden">
           <canvas ref={canvasRef} width={W} height={H} className="w-full h-auto rounded-2xl block" onClick={onClick} style={{cursor:'default'}}/>
-          <div className="mt-3 text-xs text-neutral-600 text-center">Walk right to explore. Cross the gate — the image and all faces transform.</div>
+          <div className={`mt-3 text-center transition-all duration-700 overflow-hidden ${evil ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'}`}>
+            <span className="text-2xl font-bold italic tracking-wide" style={{color:'#8b0000',fontFamily:'Georgia,serif',textShadow:'0 0 24px rgba(180,0,0,0.5)'}}>
+              Which side are you on?
+            </span>
+          </div>
         </div>
       </div>
     </div>
